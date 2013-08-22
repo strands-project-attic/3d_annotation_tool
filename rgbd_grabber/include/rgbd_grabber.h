@@ -11,12 +11,32 @@
 #include <iostream>
 #include <fstream>
 #include <deque>
+#include <queue>
+
+#include <cv_bridge/cv_bridge.h>
+
+struct Frame{
+    double m_Timestamp;
+    bool m_RGB;
+    cv_bridge::CvImagePtr m_Image;
+
+    Frame(const Frame&);
+    Frame()
+    {
+
+    }
+
+};
+
+
 
 class RGBDGrabber
 {
-
-
 public:
+
+
+
+
     RGBDGrabber();
     ~RGBDGrabber();
 
@@ -24,6 +44,7 @@ public:
     void colorImageCallback (const sensor_msgs::Image::ConstPtr& img);
     void depthImageCallback (const sensor_msgs::Image::ConstPtr& img);
 
+    void setSaveMismatchedImages(const bool&);
     void setSaveOneFrame(const bool&);
     void setSaveFrameSeq(const bool&);
     void setFrameSkip(const int&);
@@ -38,7 +59,10 @@ public:
     static std::string getDateTime();
 
 private:
-    volatile bool                               m_bSaveOneFrame, m_bSaveFrameSequence, m_bCreateCVWindow, m_bLensCovered;
+
+    void                                        syncAndSave();
+
+    volatile bool                               m_bSaveOneFrame, m_bSaveFrameSequence, m_bCreateCVWindow, m_bLensCovered, m_bSaveMismatchedImages;
     int                                         m_iSequenceNumber;
     int                                         m_iFrameSkip;
     std::string                                 m_sCurrentFolder;
@@ -46,10 +70,19 @@ private:
     double                                      m_dLastTimestamp;
     std::deque<std::pair<int, double> >         m_DepthSequenceAndTimestamp;
     std::deque<std::pair<int, double> >         m_RGBSequenceAndTimestamp;
+
+    std::priority_queue<Frame, std::vector<Frame>, std::greater<Frame> > m_FrameBuffer;
+
+    std::deque<std::pair<cv_bridge::CvImagePtr, double> >         m_DepthImageAndTimestamp;
+    std::deque<std::pair<cv_bridge::CvImagePtr, double> >         m_RGBImageAndTimestamp;
+
     int                                         m_iImageSyncQueueLength;
     double                                      m_dImageSyncTimout; // im seconds
     double                                      m_dImageSyncBetweenFrames; // im seconds
     double                                      m_dAvgPixelValueWhenLensCovered;
 };
+
+
+
 
 #endif // DATA_COMPRESION_NODE_HH

@@ -9,16 +9,28 @@
 #include <unistd.h>
 #include <math.h>
 
-#include <cv_bridge/cv_bridge.h>
+
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
 using namespace std;
 
+bool operator>(const Frame& rhs, const Frame& lhs)
+{
+    return lhs.m_Timestamp <rhs.m_Timestamp;
+}
+
+Frame::Frame(const Frame& cpy)
+{
+    this->m_Timestamp = cpy.m_Timestamp;
+    this->m_RGB = cpy.m_RGB;
+    this->m_Image = cpy.m_Image;
+}
+
 RGBDGrabber::RGBDGrabber() : m_bSaveOneFrame(false), m_bSaveFrameSequence(false), m_bCreateCVWindow(false), m_bLensCovered(true),
-    m_iSequenceNumber(0), m_dLastTimestamp(0.0), m_iImageSyncQueueLength(10), m_dImageSyncTimout(2.0), m_dImageSyncBetweenFrames(0.01),
-    m_iFrameSkip(0)
+    m_iSequenceNumber(0), m_dLastTimestamp(0.0), m_iImageSyncQueueLength(20), m_dImageSyncTimout(2.0), m_dImageSyncBetweenFrames(0.01),
+    m_iFrameSkip(0), m_bSaveMismatchedImages(true)
 {
     bool folderCreated = createNewFolder(); // to initialize m_sCurrentFolder (also to actually create the folder)
     if (!folderCreated)
@@ -28,6 +40,8 @@ RGBDGrabber::RGBDGrabber() : m_bSaveOneFrame(false), m_bSaveFrameSequence(false)
     }
 
     m_dAvgPixelValueWhenLensCovered = 16250.0;
+
+    cout.precision(15);
 }
 
 //---------------------------------------------------------------------------------------------
@@ -57,77 +71,32 @@ void RGBDGrabber::colorImageCallback(const sensor_msgs::ImageConstPtr& imgMsg)
 
         // identify the sequence number of this frame by matching its timestamp with the timestamps of previously saved Depth images
         double currentTimestamp = imgMsg->header.stamp.toSec();
-        int frameSequenceNumber = -1;
+        m_RGBImageAndTimestamp.push_front(std::make_pair(cv_ptr, currentTimestamp));        
 
-        if (m_DepthSequenceAndTimestamp.size() == 0)
+        if (m_bSaveOneFrame)
         {
-            // first frame
+            char buffer[50];
+            sprintf(buffer,"RGB%010d.png",m_iSequenceNumber);
+
+            string completeName = m_sCurrentFolder + string("/") + string(buffer);
+
+            imwrite(completeName.c_str(),cv_ptr->image);
+            m_fIndexFile<<setprecision(15)<<buffer<<" "<<imgMsg->header.stamp<<"\n";
+
+            std::cout<<"RGBDGrabber :: saved color file "<<buffer<<"   time stamp  "<<imgMsg->header.stamp<<std::endl;
+            m_bSaveOneFrame = false;
+
             m_iSequenceNumber++;
-            frameSequenceNumber = m_iSequenceNumber;
-        } else if (currentTimestamp > m_DepthSequenceAndTimestamp.back().second)
-        {
-            // this frame is ahead of all the previously saved depth images
-            if (abs(currentTimestamp - m_DepthSequenceAndTimestamp.back().second) < m_dImageSyncBetweenFrames)
-            {
-                // the difference between the previous frame and this frame is small, keep the same sequence number
-                frameSequenceNumber = m_DepthSequenceAndTimestamp.back().first;
-            } else{
-                m_iSequenceNumber++;
-                frameSequenceNumber = m_iSequenceNumber;
-            }
         } else {
-            // find the depth image which is closest to the current image (timestamp wise)
-            double smallestDiff = m_dImageSyncTimout;
-            int closestSequenceNumber = -1;
-            for (int i=m_DepthSequenceAndTimestamp.size()-1; i>=0;i--)
-            {
-                double diff = abs(currentTimestamp - m_DepthSequenceAndTimestamp[i].second);
-                if (diff < smallestDiff)
-                {
-                    smallestDiff = diff;
-                    closestSequenceNumber = m_DepthSequenceAndTimestamp[i].first;
-                }
-            }
+            Frame newFrame;
+            newFrame.m_Timestamp = currentTimestamp;
+            newFrame.m_RGB = true;
+            newFrame.m_Image = cv_ptr;
+            m_FrameBuffer.push(newFrame);
 
-            if (smallestDiff <m_dImageSyncTimout)
-            {
-                frameSequenceNumber = closestSequenceNumber;
-            } else {
-                cout<<"ERROR - cannot save image as it is out of sync. Time difference > "<<m_dImageSyncTimout<<endl;
-            }
+            syncAndSave();
         }
 
-
-        if (frameSequenceNumber == -1)
-        {
-            cout<<"An error occured, cannot save depth image"<<endl;
-            return;
-        }
-
-        m_RGBSequenceAndTimestamp.push_back(std::make_pair(frameSequenceNumber,currentTimestamp));
-        if (m_RGBSequenceAndTimestamp.size() > m_iImageSyncQueueLength)
-        {
-            m_RGBSequenceAndTimestamp.pop_front(); // remove the oldest element from the queue
-        }
-
-        // check the frameskip value, skip the frame if necessary
-        if (!(frameSequenceNumber%(m_iFrameSkip+1)  == 0))
-        {
-            return;
-        }
-
-        char buffer[50];
-        sprintf(buffer,"RGB%010d.png",frameSequenceNumber);
-
-        string completeName = m_sCurrentFolder + string("/") + string(buffer);
-
-
-        imwrite(completeName.c_str(),cv_ptr->image);
-        m_fIndexFile<<buffer<<" "<<imgMsg->header.stamp<<"\n";
-
-        std::cout<<"RGBDGrabber :: saved color file "<<buffer<<"   time stamp  "<<imgMsg->header.stamp<<std::endl;
-
-        m_bSaveOneFrame = false;       
 
 
     }
@@ -178,83 +147,123 @@ void RGBDGrabber::depthImageCallback(const sensor_msgs::ImageConstPtr& imgMsg)
             m_bLensCovered = false;
         }
 
-//        imshow( "DepthWindow", cv_ptr->image );
-//        cv::waitKey(10);
 
-        // identify the sequence number of this frame by matching its timestamp with the timestamps of previously saved Depth images
+
         double currentTimestamp = imgMsg->header.stamp.toSec();
-        int frameSequenceNumber = -1;
-        if (m_RGBSequenceAndTimestamp.size() == 0)
+
+        if (m_bSaveOneFrame)
         {
-            // first frame
+            char buffer[50];
+            sprintf(buffer,"Depth%010d.png",m_iSequenceNumber);
+            string completeName = m_sCurrentFolder + string("/") + string(buffer);
+            m_fIndexFile<<setprecision(15)<<buffer<<" "<<currentTimestamp<<"\n";
+
+            cv::Mat ucharMat;
+            cv_ptr->image.convertTo(ucharMat, CV_16UC1);
+            imwrite(completeName.c_str(),ucharMat);
+            std::cout<<"RGBDGrabber :: saved depth file "<<buffer<<"   time stamp  "<<currentTimestamp<<std::endl;
+
+            m_bSaveOneFrame = false;
             m_iSequenceNumber++;
-            frameSequenceNumber = m_iSequenceNumber;
-        } else if (currentTimestamp > m_RGBSequenceAndTimestamp.back().second)
-        {
-            // this frame is ahead of all the previously saved depth images
-            if (abs(currentTimestamp - m_RGBSequenceAndTimestamp.back().second) < m_dImageSyncBetweenFrames)
-            {
-                // the difference between the previous frame and this frame is small, keep the same sequence number
-                frameSequenceNumber = m_RGBSequenceAndTimestamp.back().first;
-            } else{
-                m_iSequenceNumber++;
-                frameSequenceNumber = m_iSequenceNumber;
-            }
         } else {
-            // find the depth image which is closest to the current image (timestamp wise)
-            double smallestDiff = m_dImageSyncTimout;
-            int closestSequenceNumber = -1;
-            for (int i=m_RGBSequenceAndTimestamp.size()-1; i>=0;i--)
+            Frame newFrame;
+            newFrame.m_Timestamp = currentTimestamp;
+            newFrame.m_RGB = false;
+            newFrame.m_Image = cv_ptr;
+            m_FrameBuffer.push(newFrame);
+
+            syncAndSave();
+        }
+
+    }
+
+}
+//---------------------------------------------------------------------------------------------
+void RGBDGrabber::syncAndSave()
+{
+    if (m_FrameBuffer.size()>m_iImageSyncQueueLength*0.75)
+    {
+        while (m_FrameBuffer.size()>m_iImageSyncQueueLength*0.25)
+        {
+            Frame currentFrame = m_FrameBuffer.top();
+            m_FrameBuffer.pop();
+//            cout<<"Current frame "<<currentFrame.m_Timestamp<<" queue size "<<m_FrameBuffer.size()<<" type "<<currentFrame.m_RGB<<endl;
+            Frame nextFrame = m_FrameBuffer.top();
+            double tsDiff = abs(currentFrame.m_Timestamp - nextFrame.m_Timestamp);
+            m_FrameBuffer.pop();
+            Frame nextnextFrame = m_FrameBuffer.top();
+            double nexttsDiff = abs(nextnextFrame.m_Timestamp - nextFrame.m_Timestamp);
+
+            if (currentFrame.m_RGB == nextFrame.m_RGB || (tsDiff>m_dImageSyncTimout) || (nexttsDiff<tsDiff))
             {
-                double diff = abs(currentTimestamp - m_RGBSequenceAndTimestamp[i].second);
-                if (diff < smallestDiff)
+                // same image type -> currentFrame doesn't have a match, save it directly
+                m_FrameBuffer.push(nextFrame); // this was popped to see what comes after
+
+                if ((m_iSequenceNumber%(m_iFrameSkip+1) == 0) && (m_bSaveMismatchedImages))
                 {
-                    smallestDiff = diff;
-                    closestSequenceNumber = m_RGBSequenceAndTimestamp[i].first;
+                    char buffer[50];
+                    if (currentFrame.m_RGB)
+                    {
+                        sprintf(buffer,"RGB%010d.png",m_iSequenceNumber);
+                    }  else
+                    {
+                        sprintf(buffer,"Depth%010d.png",m_iSequenceNumber);
+                    }
+
+                    m_fIndexFile<<setprecision(15)<<buffer<<" "<<currentFrame.m_Timestamp<<"\n";
+                    string completeName = m_sCurrentFolder + string("/") + string(buffer);
+                    if (currentFrame.m_RGB)
+                    {
+                        cv::imwrite(completeName.c_str(),currentFrame.m_Image->image);
+                        std::cout<<"RGBDGrabber :: saved color file "<<buffer<<"   time stamp  "<<currentFrame.m_Timestamp<<std::endl;
+                    } else {
+                        cv::Mat ucharMat;
+                        currentFrame.m_Image->image.convertTo(ucharMat, CV_16UC1);
+                        imwrite(completeName.c_str(),ucharMat);
+                        std::cout<<"RGBDGrabber :: saved depth file "<<buffer<<"   time stamp  "<<currentFrame.m_Timestamp<<std::endl;
+                    }
                 }
-            }
-
-            if (smallestDiff <m_dImageSyncTimout)
-            {
-                frameSequenceNumber = closestSequenceNumber;
             } else {
-                cout<<"ERROR - cannot save image as it is out of sync. Time difference > "<<m_dImageSyncTimout<<endl;
+                char buffer1[50], buffer2[50];
+
+                if (m_iSequenceNumber%(m_iFrameSkip+1) == 0)
+                {
+                    if (currentFrame.m_RGB)
+                    {
+                        sprintf(buffer1,"RGB%010d.png",m_iSequenceNumber);
+                        sprintf(buffer2,"Depth%010d.png",m_iSequenceNumber);
+                    }  else
+                    {
+                        sprintf(buffer1,"Depth%010d.png",m_iSequenceNumber);
+                        sprintf(buffer2,"RGB%010d.png",m_iSequenceNumber);
+                    }
+
+                    m_fIndexFile<<setprecision(15)<<buffer1<<" "<<currentFrame.m_Timestamp<<"\n";
+                    m_fIndexFile<<setprecision(15)<<buffer2<<" "<<nextFrame.m_Timestamp<<"\n";
+                    string completeName1 = m_sCurrentFolder + string("/") + string(buffer1);
+                    string completeName2 = m_sCurrentFolder + string("/") + string(buffer2);
+                    if (currentFrame.m_RGB)
+                    {
+                        imwrite(completeName1.c_str(),currentFrame.m_Image->image);
+                        std::cout<<"RGBDGrabber :: saved color file "<<buffer1<<"   time stamp  "<<currentFrame.m_Timestamp<<std::endl;
+                        cv::Mat ucharMat;
+                        nextFrame.m_Image->image.convertTo(ucharMat, CV_16UC1);
+                        imwrite(completeName2.c_str(),ucharMat);
+                        std::cout<<"RGBDGrabber :: saved depth file "<<buffer2<<"   time stamp  "<<nextFrame.m_Timestamp<<std::endl;
+                    } else {
+                        cv::Mat ucharMat;
+                        currentFrame.m_Image->image.convertTo(ucharMat, CV_16UC1);
+                        imwrite(completeName1.c_str(),ucharMat);
+                        std::cout<<"RGBDGrabber :: saved depth file "<<buffer1<<"   time stamp  "<<currentFrame.m_Timestamp<<std::endl;
+
+                        imwrite(completeName2.c_str(),currentFrame.m_Image->image);
+                        std::cout<<"RGBDGrabber :: saved color file "<<buffer2<<"   time stamp  "<<nextFrame.m_Timestamp<<std::endl;
+                    }
+                }
+
             }
+            m_iSequenceNumber++;
         }
-
-        if (frameSequenceNumber == -1)
-        {
-            cout<<"An error occured, cannot save depth image"<<endl;
-            return;
-        }
-
-        m_DepthSequenceAndTimestamp.push_back(make_pair(frameSequenceNumber,imgMsg->header.stamp.toSec()));
-        if (m_DepthSequenceAndTimestamp.size() > m_iImageSyncQueueLength)
-        {
-            m_DepthSequenceAndTimestamp.pop_front(); // remove the oldest element from the queue
-        }
-
-        // check the frameskip value, skip the frame if necessary
-        if (!(frameSequenceNumber%(m_iFrameSkip+1) == 0))
-        {
-
-            return;
-        }
-
-        char buffer[50];
-        sprintf(buffer,"Depth%010d.png",frameSequenceNumber);
-
-        string completeName = m_sCurrentFolder + string("/") + string(buffer);
-
-        imwrite(completeName.c_str(),cv_ptr->image);
-        m_fIndexFile<<buffer<<" "<<imgMsg->header.stamp<<"\n";
-
-        std::cout<<"RGBDGrabber :: saved depth file "<<buffer<<" pixel average  "<<avg<<"   time stamp  "<<imgMsg->header.stamp<<std::endl;
-
-        m_bSaveOneFrame = false;
-
-
-        m_dLastTimestamp = imgMsg->header.stamp.toSec();
     }
 
 }
@@ -268,6 +277,7 @@ void RGBDGrabber::setSaveOneFrame(const bool& saveOneFrame)
 void RGBDGrabber::setSaveFrameSeq(const bool& saveFrameSeq)
 {
     m_bSaveFrameSequence = saveFrameSeq;
+    m_FrameBuffer = std::priority_queue<Frame, std::vector<Frame>, std::greater<Frame> >();
 }
 //---------------------------------------------------------------------------------------------
 RGBDGrabber::~RGBDGrabber()
@@ -338,9 +348,13 @@ void RGBDGrabber::increaseFrameSkip()
 //---------------------------------------------------------------------------------------------
 void RGBDGrabber::decreaseFrameSkip()
 {
-    if (m_iFrameSkip > 1)
+    if (m_iFrameSkip > 0)
     {
         m_iFrameSkip--;
     }
 }
 //---------------------------------------------------------------------------------------------
+void RGBDGrabber::setSaveMismatchedImages(const bool& saveMismatched)
+{
+    m_bSaveMismatchedImages = saveMismatched;
+}

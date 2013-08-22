@@ -49,17 +49,33 @@ int main(int argc, char *argv[])
     // Create kinect node
     ros::init(argc, argv, "kinectListenner");
 
+
+
     RGBDGrabber grabber;
 
-    ros::NodeHandle n;
+    ros::NodeHandle n("~");
 //    ros::Subscriber sub = n.subscribe("/camera/depth_registered/points", 2, &DataCompressionNode::pointCloudCallback, &dataCompressor);
     ros::Subscriber sub2 = n.subscribe("/camera/rgb/image_color", 10, &RGBDGrabber::colorImageCallback, &grabber);
     ros::Subscriber sub3 = n.subscribe("/camera/depth_registered/image_rect", 10, &RGBDGrabber::depthImageCallback, &grabber);
-
     ros::Rate loop_rate(10);
 
-    bool loop = true;
+    bool saveMismatched= true;
+
+    n.getParam("saveMismatched", saveMismatched);
+
     std::cout<<"------------------------- RGBD_GRABBER started -----------------------------"<<std::endl;
+    grabber.setSaveMismatchedImages(saveMismatched);
+    if (saveMismatched)
+    {
+        std::cout<<"--------------- RGBDGrabber will save mismatched images. You will get all the frames. ---------------- "<<std::endl;
+    } else {
+        std::cout<<"--------------- RGBDGrabber will NOT save mismatched images. You might miss some frames. ---------------- "<<std::endl;
+    }
+
+
+
+    bool loop = true;
+
     while (ros::ok() && loop)
     {
         int ch = keyPressed();
