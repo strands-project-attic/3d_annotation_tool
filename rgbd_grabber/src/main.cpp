@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     ros::NodeHandle n("~");
 //    ros::Subscriber sub = n.subscribe("/camera/depth_registered/points", 2, &DataCompressionNode::pointCloudCallback, &dataCompressor);
     ros::Subscriber sub2 = n.subscribe("/camera/rgb/image_color", 10, &RGBDGrabber::colorImageCallback, &grabber);
-    ros::Subscriber sub3 = n.subscribe("/camera/depth_registered/image_rect", 10, &RGBDGrabber::depthImageCallback, &grabber);
+    ros::Subscriber sub3 = n.subscribe("/camera/depth_registered/image_rect_raw", 10, &RGBDGrabber::depthImageCallback, &grabber);
     ros::Rate loop_rate(10);
 
     bool saveMismatched= true;

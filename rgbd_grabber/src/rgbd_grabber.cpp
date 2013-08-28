@@ -39,7 +39,7 @@ RGBDGrabber::RGBDGrabber() : m_bSaveOneFrame(false), m_bSaveFrameSequence(false)
         m_fIndexFile.open("index.txt");
     }
 
-    m_dAvgPixelValueWhenLensCovered = 16250.0;
+    m_dAvgPixelValueWhenLensCovered = 100;
 
     cout.precision(15);
 }
@@ -96,12 +96,7 @@ void RGBDGrabber::colorImageCallback(const sensor_msgs::ImageConstPtr& imgMsg)
 
             syncAndSave();
         }
-
-
-
     }
-
-
 }
 //---------------------------------------------------------------------------------------------
 void RGBDGrabber::depthImageCallback(const sensor_msgs::ImageConstPtr& imgMsg)
@@ -114,7 +109,7 @@ void RGBDGrabber::depthImageCallback(const sensor_msgs::ImageConstPtr& imgMsg)
         cv_bridge::CvImagePtr cv_ptr;
         try
         {
-            cv_ptr = cv_bridge::toCvCopy(imgMsg, "32FC1");
+            cv_ptr = cv_bridge::toCvCopy(imgMsg, "16UC1");
         }
         catch (cv_bridge::Exception& e)
         {
@@ -128,11 +123,16 @@ void RGBDGrabber::depthImageCallback(const sensor_msgs::ImageConstPtr& imgMsg)
         double avg = 0.0;
         for (size_t i=0; i<cv_ptr->image.rows;i++)
             for (size_t j=0; j<cv_ptr->image.cols;j++)
-                avg+=cv_ptr->image.at<int16_t>(i,j);
+            {
+                avg+=cv_ptr->image.at<uint16_t>(i,j);
+            }
+
+//        cout<<"Depth image average "<<avg/(cv_ptr->image.rows*cv_ptr->image.cols)<<endl;
+
 
         avg/=(cv_ptr->image.rows*cv_ptr->image.cols);
 
-        if (avg>m_dAvgPixelValueWhenLensCovered)
+        if (avg<m_dAvgPixelValueWhenLensCovered)
         {
             m_bLensCovered = true;
             // check whether we need to create a new folder
@@ -147,8 +147,6 @@ void RGBDGrabber::depthImageCallback(const sensor_msgs::ImageConstPtr& imgMsg)
             m_bLensCovered = false;
         }
 
-
-
         double currentTimestamp = imgMsg->header.stamp.toSec();
 
         if (m_bSaveOneFrame)
@@ -158,11 +156,15 @@ void RGBDGrabber::depthImageCallback(const sensor_msgs::ImageConstPtr& imgMsg)
             string completeName = m_sCurrentFolder + string("/") + string(buffer);
             m_fIndexFile<<setprecision(15)<<buffer<<" "<<currentTimestamp<<"\n";
 
-            cv::Mat ucharMat;
-//            cv_ptr->image.convertTo(ucharMat, CV_16UC1);
-//            imwrite(completeName.c_str(),ucharMat);
-            imwrite(completeName.c_str(), cv_ptr->image);
+            imwrite(completeName.c_str(),cv_ptr->image);
             std::cout<<"RGBDGrabber :: saved depth file "<<buffer<<"   time stamp  "<<currentTimestamp<<std::endl;
+
+            /*************** TEST SAVING **************************/
+//            cv::Mat savedImage;
+//            savedImage = cv::imread(completeName.c_str(),-1);
+//            imshow("Input",cv_ptr->image);
+//            imshow("Output",savedImage);
+//            cv::waitKey(0);
 
             m_bSaveOneFrame = false;
             m_iSequenceNumber++;
@@ -218,9 +220,7 @@ void RGBDGrabber::syncAndSave()
                         cv::imwrite(completeName.c_str(),currentFrame.m_Image->image);
                         std::cout<<"RGBDGrabber :: saved color file "<<buffer<<"   time stamp  "<<currentFrame.m_Timestamp<<std::endl;
                     } else {
-                        cv::Mat ucharMat;
-                        currentFrame.m_Image->image.convertTo(ucharMat, CV_16UC1);
-                        imwrite(completeName.c_str(),ucharMat);
+                        imwrite(completeName.c_str(),currentFrame.m_Image->image);
                         std::cout<<"RGBDGrabber :: saved depth file "<<buffer<<"   time stamp  "<<currentFrame.m_Timestamp<<std::endl;
                     }
                 }
@@ -247,15 +247,10 @@ void RGBDGrabber::syncAndSave()
                     {
                         imwrite(completeName1.c_str(),currentFrame.m_Image->image);
                         std::cout<<"RGBDGrabber :: saved color file "<<buffer1<<"   time stamp  "<<currentFrame.m_Timestamp<<std::endl;
-                        cv::Mat ucharMat;
-                        nextFrame.m_Image->image.convertTo(ucharMat, CV_16UC1);
-//                        imwrite(completeName2.c_str(),ucharMat);
+
                         imwrite(completeName2.c_str(),nextFrame.m_Image->image);
                         std::cout<<"RGBDGrabber :: saved depth file "<<buffer2<<"   time stamp  "<<nextFrame.m_Timestamp<<std::endl;
                     } else {
-                        cv::Mat ucharMat;
-                        currentFrame.m_Image->image.convertTo(ucharMat, CV_16UC1);
-//                        imwrite(completeName1.c_str(),ucharMat);
                         imwrite(completeName1.c_str(),currentFrame.m_Image->image);
                         std::cout<<"RGBDGrabber :: saved depth file "<<buffer1<<"   time stamp  "<<currentFrame.m_Timestamp<<std::endl;
 
