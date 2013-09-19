@@ -40,6 +40,8 @@ RGBDGrabber::RGBDGrabber() : m_bSaveOneFrame(false), m_bSaveFrameSequence(false)
     }
 
     m_dAvgPixelValueWhenLensCovered = 100;
+    m_iDarkDepthImageThreshold = 20;
+    m_iCurrentDarkDepthImageCount = 0;
 
     cout.precision(15);
 }
@@ -134,16 +136,24 @@ void RGBDGrabber::depthImageCallback(const sensor_msgs::ImageConstPtr& imgMsg)
 
         if (avg<m_dAvgPixelValueWhenLensCovered)
         {
-            m_bLensCovered = true;
-            // check whether we need to create a new folder
-            cout<<"Lens covered; skipping image."<<endl;
-            if (m_bSaveFrameSequence && (m_iSequenceNumber != 0))
+            m_iCurrentDarkDepthImageCount++;
+            if (m_iCurrentDarkDepthImageCount > m_iDarkDepthImageThreshold)
             {
-                createNewFolder(); // this also sets m_iSequenceNumber to 0
-                cout<<"Lens covered; skipping image. Creating new folder."<<endl;
+                m_bLensCovered = true;
+                // check whether we need to create a new folder
+                cout<<"Lens covered; skipping image."<<endl;
+                if (m_bSaveFrameSequence && (m_iSequenceNumber != 0))
+                {
+                    createNewFolder(); // this also sets m_iSequenceNumber to 0
+                    cout<<"Lens covered; skipping image. Creating new folder."<<endl;
+                }
+                return;
+            } else {
+                // return without saving this image (no depth)
+                return;
             }
-            return;
         } else {
+            m_iCurrentDarkDepthImageCount = 0;
             m_bLensCovered = false;
         }
 

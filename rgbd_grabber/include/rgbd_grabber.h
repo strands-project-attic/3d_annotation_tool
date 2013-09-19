@@ -80,6 +80,8 @@ private:
     double                                      m_dImageSyncTimout; // im seconds
     double                                      m_dImageSyncBetweenFrames; // im seconds
     double                                      m_dAvgPixelValueWhenLensCovered;
+    int                                         m_iDarkDepthImageThreshold;
+    int                                         m_iCurrentDarkDepthImageCount;
 };
 
 
