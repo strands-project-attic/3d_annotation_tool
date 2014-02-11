@@ -39,8 +39,23 @@ objectsInformation::objectsInformation()
                           "gold",
                           "salmon",
                           "grey",
+                          "blueViolet",
+                          "red",
+                          "green",
+                          "blue",
+                          "yellow",
+                          "pink",
+                          "turquoise",
+                          "orange",
+                          "purple",
+                          "dark green",
+                          "beige",
+                          "brown",
+                          "gold",
+                          "salmon",
+                          "grey",
                           "blueViolet"};
-    _nameColors.assign(colors, colors+15);
+    _nameColors.assign(colors, colors+29);
 }
 
 

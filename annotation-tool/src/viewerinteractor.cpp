@@ -18,11 +18,11 @@ viewerInteractor::viewerInteractor():
 {
     // The color order is: red, green, blue, yellow, pink, turquoise, orange, purple,
     // dark green, beige, brown, gold, salmon, grey, blueViolet
-    int cRed [15] = {  255,   0,   0, 255, 255,   0, 255, 128,   0, 255, 165, 139, 198, 84, 138};
-    int cGreen [15] = {  0, 255,   0, 255,   0, 255, 160,  0, 128, 222, 42, 117, 113, 84, 43};
-    int cBlue [15] = {   0,   0, 255,   0, 255, 255, 0  , 128,   0, 173, 42,  0, 113, 84, 226};
+    int cRed [30] = {  255,   0,   0, 255, 255,   0, 255, 128,   0, 255, 165, 139, 198, 84, 138,      255,   0,   0, 255, 255,   0, 255, 128,   0, 255, 165, 139, 198, 84, 138};
+    int cGreen [30] = {  0, 255,   0, 255,   0, 255, 160,  0, 128, 222, 42, 117, 113, 84, 43,          0, 255,   0, 255,   0, 255, 160,  0, 128, 222, 42, 117, 113, 84, 43};
+    int cBlue [30] = {   0,   0, 255,   0, 255, 255, 0  , 128,   0, 173, 42,  0, 113, 84, 226,         0,   0, 255,   0, 255, 255, 0  , 128,   0, 173, 42,  0, 113, 84, 226};
 
-    for(int i=0; i<15; i++){
+    for(int i=0; i<30; i++){
         colorRedValue.push_back(cRed[i]);
         colorGreenValue.push_back(cGreen[i]);
         colorBlueValue.push_back(cBlue[i]);
