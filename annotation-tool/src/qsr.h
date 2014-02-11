@@ -9,15 +9,17 @@ class qsr
 public:
     qsr(std::vector<object> objectList);
 
-    void calculateQSROnRight();
+    void calculateQSRRight();
 
-    void calculateQSROnLeft();
+    void calculateQSRLeft();
 
     void calculateQSRInFront();
 
     void calculateQSRBehind();
 
-    void test();
+    QString getDescription();
+
+    QString getAllValues();
 
 private:
     pcl::PointXYZ getCenterOfMass(object obj);
@@ -26,9 +28,9 @@ private:
 
     void calculatePointTrajector(object trajector);
 
-    void calculateAnglesAndDistanceOnRight();
+    void calculateAnglesAndDistanceRight();
 
-    void calculateAnglesAndDistanceOnLeft();
+    void calculateAnglesAndDistanceLeft();
 
     void calculateAnglesAndDistanceInFront();
 
@@ -38,23 +40,27 @@ private:
 
     float distanceFunction(float distance, float perimeter);
 
-    float qsrOnRight();
+    float qsrRight();
 
-    float qsrOnLeft();
+    float qsrLeft();
 
     float qsrInFront();
 
     float qsrBehind();
 
+    void getStringStream(float *values, std::stringstream& ss, std::string relation);
+
+    // I need to explain what is the meaning of each point.
     pcl::PointXYZ _FLDPoint, _FRDPoint, _BRDPoint, _BLDPoint;
     pcl::PointXYZ _FCPoint, _RCPoint, _BCPoint, _LCPoint;
     pcl::PointXYZ _centerOfMassTrajector;
 
-    float _angleRightOnRight, _angleLeftOnRight, _distanceOnRight;
-    float _angleRightOnLeft, _angleLeftOnLeft, _distanceOnLeft;
+    float _angleRightRight, _angleLeftRight, _distanceRight;
+    float _angleRightLeft, _angleLeftLeft, _distanceLeft;
     float _angleRightInFront, _angleLeftInFront, _distanceInFront;
     float _angleRightBehind, _angleLeftBehind, _distanceBehind;
     float _distanceThreshold;
+    float _perimeterLandmark;
 
     std::vector<object> _objectList;
 };

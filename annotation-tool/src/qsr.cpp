@@ -7,14 +7,43 @@
 #include <pcl/common/eigen.h>
 #include <pcl/common/angles.h>
 
+using namespace std;
+
 qsr::qsr(std::vector<object> objectList)
 {
     _objectList = objectList;
     _distanceThreshold = 1.5;
 }
 
-void qsr::calculateQSROnRight(){
 
+// This function calculate all the values for the relations right of
+// and display its results in the terminal
+void qsr::calculateQSRRight(){
+    float values[_objectList.size()][_objectList.size()];
+
+    // Calculate values
+    // **** Need to add that if the landmark is a Mouse or Mug do not calculate *****
+    for(int i=0; i < _objectList.size(); i++){
+        calculatePointsLandmark(_objectList[i]);
+        for(int j=0; j < _objectList.size(); j++){
+            if(j == i) values[j][i] = -1;
+            else{
+                calculatePointTrajector(_objectList[j]);
+                values[j][i] = qsrRight();
+            }
+        }
+    }
+
+    stringstream ss2;
+
+    getStringStream(&values[0][0], ss2, "Right");
+
+    cout << ss2.str() << endl;
+}
+
+// This function calculate all the values for the relations left of
+// and display its results in the terminal
+void qsr::calculateQSRLeft(){
     float values[_objectList.size()][_objectList.size()];
 
     // Calculate values
@@ -24,71 +53,21 @@ void qsr::calculateQSROnRight(){
             if(j == i) values[j][i] = -1;
             else{
                 calculatePointTrajector(_objectList[j]);
-                values[j][i] = qsrOnRight();
+                values[j][i] = qsrLeft();
             }
         }
     }
 
-    // Print the table
-    std::cout << "------------------------------------------------" << std::endl;
-    std::cout << "----------On Right of---------------------------" << std::endl;
-    std::cout << "------------------------------------------------\n" << std::endl;
+    stringstream ss2;
 
-    std::cout << std::setw(10) << "" << std::ends;
-    for(int i = 0; i < _objectList.size(); i++){
-        std::cout << std::setw(10) << _objectList[i].name.toStdString() << std::ends;
-    }
-    std::cout << std::endl;
+    getStringStream(&values[0][0], ss2, "Left");
 
-    for(int i = 0; i < _objectList.size(); i++){
-        std::cout << std::setw(10) << std::left << _objectList[i].name.toStdString() << std::ends;
-        for(int j = 0; j < _objectList.size(); j++){
-            if(i==j)std::cout << std::setw(10) << std::right << "X" << std::ends;
-            else std::cout << std::setw(10) << std::right << std::setprecision(2)  << values[i][j] << std::ends;
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
+    cout << ss2.str() << endl;
 }
 
-void qsr::calculateQSROnLeft(){
 
-    float values[_objectList.size()][_objectList.size()];
-
-    // Calculate values
-    for(int i=0; i < _objectList.size(); i++){
-        calculatePointsLandmark(_objectList[i]);
-        for(int j=0; j < _objectList.size(); j++){
-            if(j == i) values[j][i] = -1;
-            else{
-                calculatePointTrajector(_objectList[j]);
-                values[j][i] = qsrOnLeft();
-            }
-        }
-    }
-
-    // Print the table
-    std::cout << "------------------------------------------------" << std::endl;
-    std::cout << "----------On Left of----------------------------" << std::endl;
-    std::cout << "------------------------------------------------\n" << std::endl;
-
-    std::cout << std::setw(10) << "" << std::ends;
-    for(int i = 0; i < _objectList.size(); i++){
-        std::cout << std::setw(10) << _objectList[i].name.toStdString() << std::ends;
-    }
-    std::cout << std::endl;
-
-    for(int i = 0; i < _objectList.size(); i++){
-        std::cout << std::setw(10) << std::left << _objectList[i].name.toStdString() << std::ends;
-        for(int j = 0; j < _objectList.size(); j++){
-            if(i==j)std::cout << std::setw(10) << std::right << "X" << std::ends;
-            else std::cout << std::setw(10) << std::setprecision(2) << std::right << values[i][j] << std::ends;
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
-}
-
+// This function calculate all the values for the relations front of
+// and display its results in the terminal
 void qsr::calculateQSRInFront(){
 
     float values[_objectList.size()][_objectList.size()];
@@ -105,28 +84,15 @@ void qsr::calculateQSRInFront(){
         }
     }
 
-    // Print the table
-    std::cout << "------------------------------------------------" << std::endl;
-    std::cout << "----------In Front of---------------------------" << std::endl;
-    std::cout << "------------------------------------------------\n" << std::endl;
+    stringstream ss2;
 
-    std::cout << std::setw(10) << "" << std::ends;
-    for(int i = 0; i < _objectList.size(); i++){
-        std::cout << std::setw(10) << _objectList[i].name.toStdString() << std::ends;
-    }
-    std::cout << std::endl;
+    getStringStream(&values[0][0], ss2, "Front");
 
-    for(int i = 0; i < _objectList.size(); i++){
-        std::cout << std::setw(10) << std::left << _objectList[i].name.toStdString() << std::ends;
-        for(int j = 0; j < _objectList.size(); j++){
-            if(i==j)std::cout << std::setw(10) << std::right << "X" << std::ends;
-            else std::cout << std::setw(10) << std::right << std::setprecision(2)  << values[i][j] << std::ends;
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
+    cout << ss2.str() << endl;
 }
 
+// This function calculate all the values for the relations behind of
+// and display its results in the terminal
 void qsr::calculateQSRBehind(){
 
     float values[_objectList.size()][_objectList.size()];
@@ -143,28 +109,14 @@ void qsr::calculateQSRBehind(){
         }
     }
 
-    // Print the table
-    std::cout << "------------------------------------------------" << std::endl;
-    std::cout << "----------Behind of-----------------------------" << std::endl;
-    std::cout << "------------------------------------------------\n" << std::endl;
+    stringstream ss2;
 
-    std::cout << std::setw(10) << "" << std::ends;
-    for(int i = 0; i < _objectList.size(); i++){
-        std::cout << std::setw(10) << _objectList[i].name.toStdString() << std::ends;
-    }
-    std::cout << std::endl;
+    getStringStream(&values[0][0], ss2, "Behind");
 
-    for(int i = 0; i < _objectList.size(); i++){
-        std::cout << std::setw(10) << std::left << _objectList[i].name.toStdString() << std::ends;
-        for(int j = 0; j < _objectList.size(); j++){
-            if(i==j)std::cout << std::setw(10) << std::right << "X" << std::ends;
-            else std::cout << std::setw(10) << std::right << std::setprecision(2)  << values[i][j] << std::ends;
-        }
-        std::cout << std::endl;
-    }
-    std::cout << std::endl;
+    cout << ss2.str() << endl;
 }
 
+// Calculate the center of mass of an object as the centroid of the bounding box
 pcl::PointXYZ qsr::getCenterOfMass(object obj){
     pcl::PointXYZ centerOfMass;
     centerOfMass.x = obj.geometry.length/2;
@@ -183,6 +135,7 @@ pcl::PointXYZ qsr::getCenterOfMass(object obj){
     return centerOfMass;
 }
 
+// Calculate the needed parameters of the landmark.
 void qsr::calculatePointsLandmark(object landmark){
     // Firstly, get the transformation of the landmark
     Eigen::Affine3f transformationLandmark = pcl::getTransformation (landmark.geometry.pose.x,
@@ -240,13 +193,18 @@ void qsr::calculatePointsLandmark(object landmark){
     _BRDPoint.y = landmark.geometry.width;
     _BRDPoint.z = 0;
     _BRDPoint = pcl::transformPoint(_BRDPoint, transformationLandmark);
+
+    // Calculate the perimeter of the landmark
+    _perimeterLandmark = 2*landmark.geometry.length + 2*landmark.geometry.width;
 }
 
+// Calculate the needed parameters for the trajector
 void qsr::calculatePointTrajector(object trajector){
     _centerOfMassTrajector = getCenterOfMass(trajector);
 }
 
-void qsr::calculateAnglesAndDistanceOnRight(){
+// Calculation of angles and distance for the relation right of
+void qsr::calculateAnglesAndDistanceRight(){
     // Front face direction
     Eigen::Vector4f frontDirection4f(_FRDPoint.x - _FLDPoint.x, _FRDPoint.y - _FLDPoint.y, 0, 0);
     Eigen::Vector3f frontDirection3f = frontDirection4f.segment(0,3);
@@ -271,20 +229,21 @@ void qsr::calculateAnglesAndDistanceOnRight(){
     Eigen::Vector3f crossProductRight = frontDirection3f.cross(rightCornerCenterLine3f);
 
     // Calculate the angle and modify depending the orientation
-    _angleRightOnRight = pcl::getAngle3D (rightCornerCenterLine4f, frontDirection4f);
-    if(crossProductRight(2)<0) _angleRightOnRight = 2*M_PI-_angleRightOnRight;
+    _angleRightRight = pcl::getAngle3D (rightCornerCenterLine4f, frontDirection4f);
+    if(crossProductRight(2)<0) _angleRightRight = 2*M_PI-_angleRightRight;
 
     // Cross product to know which is the orientation
     Eigen::Vector3f crossProductLeft = frontDirection3f.cross(leftCornerCenterLine3f);
     // Calculate the angle and modify depending the orientation
-    _angleLeftOnRight = pcl::getAngle3D (leftCornerCenterLine4f, frontDirection4f);
-    if(crossProductLeft(2)>0) _angleLeftOnRight = 2*M_PI-_angleLeftOnRight;
+    _angleLeftRight = pcl::getAngle3D (leftCornerCenterLine4f, frontDirection4f);
+    if(crossProductLeft(2)>0) _angleLeftRight = 2*M_PI-_angleLeftRight;
 
     // Calculate the distance
-    _distanceOnRight = pcl::euclideanDistance(_centerOfMassTrajector, _RCPoint);
+    _distanceRight = pcl::euclideanDistance(_centerOfMassTrajector, _RCPoint);
 }
 
-void qsr::calculateAnglesAndDistanceOnLeft(){
+// Calculation of angles and distance for the relation left of
+void qsr::calculateAnglesAndDistanceLeft(){
     // Front face direction
     Eigen::Vector4f backDirection4f(_BRDPoint.x - _BLDPoint.x, _BRDPoint.y - _BLDPoint.y, 0, 0);
     Eigen::Vector3f backDirection3f = backDirection4f.segment(0,3);
@@ -308,19 +267,20 @@ void qsr::calculateAnglesAndDistanceOnLeft(){
     // Cross product to know which is the orientation
     Eigen::Vector3f crossProductRight = backDirection3f.cross(rightCornerCenterLine3f);
     // Calculate the angle and modify depending the orientation
-    _angleRightOnLeft = pcl::getAngle3D (rightCornerCenterLine4f, backDirection4f);
-    if(crossProductRight(2)<0) _angleRightOnLeft = 2*M_PI-_angleRightOnLeft;
+    _angleRightLeft = pcl::getAngle3D (rightCornerCenterLine4f, backDirection4f);
+    if(crossProductRight(2)<0) _angleRightLeft = 2*M_PI-_angleRightLeft;
 
     // Cross product to know which is the orientation
     Eigen::Vector3f crossProductLeft = backDirection3f.cross(leftCornerCenterLine3f);
     // Calculate the angle and modify depending the orientation
-    _angleLeftOnLeft = pcl::getAngle3D (leftCornerCenterLine4f, backDirection4f);
-    if(crossProductLeft(2)>0) _angleLeftOnLeft = 2*M_PI-_angleLeftOnLeft;
+    _angleLeftLeft = pcl::getAngle3D (leftCornerCenterLine4f, backDirection4f);
+    if(crossProductLeft(2)>0) _angleLeftLeft = 2*M_PI-_angleLeftLeft;
 
     // Calculate the distance
-    _distanceOnLeft = pcl::euclideanDistance(_centerOfMassTrajector, _LCPoint);
+    _distanceLeft = pcl::euclideanDistance(_centerOfMassTrajector, _LCPoint);
 }
 
+// Calculation of angles and distance for the relation in front
 void qsr::calculateAnglesAndDistanceInFront(){
     // Left face direction
     Eigen::Vector4f leftDirection4f(_FLDPoint.x - _BRDPoint.x, _FLDPoint.y - _BRDPoint.y, 0, 0);
@@ -358,6 +318,7 @@ void qsr::calculateAnglesAndDistanceInFront(){
     _distanceInFront = pcl::euclideanDistance(_centerOfMassTrajector, _FCPoint);
 }
 
+// Calculation of angles and distance for the relation behind
 void qsr::calculateAnglesAndDistanceBehind(){
     // Left face direction
     Eigen::Vector4f rightDirection4f(_BLDPoint.x - _FRDPoint.x, _BLDPoint.y - _FRDPoint.y, 0, 0);
@@ -395,7 +356,8 @@ void qsr::calculateAnglesAndDistanceBehind(){
     _distanceBehind = pcl::euclideanDistance(_centerOfMassTrajector, _BCPoint);
 }
 
-// Arreglar funcions al quadrat, etc.
+// Angle function
+// Maybe is too much restrictive. Needed to anylize human behaviour when looking for a relation
 float qsr::angleFunction(float angle){
     if(angle >= 0 && angle < M_PI_2) return 1.0;
     else if(angle >= M_PI_2 && angle < 2*M_PI/3) return 1-(36/(M_PI*M_PI))*(angle - M_PI_2)*(angle - M_PI_2);
@@ -403,48 +365,173 @@ float qsr::angleFunction(float angle){
     else return 1 - (36/(M_PI*M_PI))*(angle - 2*M_PI)*(angle - 2*M_PI);
 }
 
+
+// Distance function version
 float qsr::distanceFunction(float distance, float perimeter){
-    if(distance <= perimeter/2) return 1.0;
-    else if(distance <= 3*perimeter/4) return 1-(8/pow(perimeter,2))*(pow(distance-perimeter/2,2));
-    else return 0.5*pow((distance-3*perimeter/4)+1,-5);
+    float factor;
 
+    // For small objects the distance function is more restrictive
+    if(perimeter < 0.4) factor = 0.1;
+    else factor = 0.2;
 
-    //    if x <= width/2
-    //      y = 1;
-    //    elseif x <= 3*width/4
-    //        y = 1 - (8/(width^2))*((x-width/2)^2);
-    //    else
-    //      y = 0.5*((x-3*width/4)+1)^-0.3;
+    if(distance < factor) return 1;
+    else return exp(-((distance-factor)/0.4)*log(2));
 }
 
-float qsr::qsrOnRight(){
-    calculateAnglesAndDistanceOnRight();
-    return angleFunction(_angleRightOnRight)*angleFunction(_angleLeftOnRight)*distanceFunction(_distanceOnRight, _distanceThreshold);
+float qsr::qsrRight(){
+    calculateAnglesAndDistanceRight();
+    return angleFunction(_angleRightRight)*angleFunction(_angleLeftRight)*distanceFunction(_distanceRight, _perimeterLandmark);
 }
 
-float qsr::qsrOnLeft(){
-    calculateAnglesAndDistanceOnLeft();
-    return angleFunction(_angleRightOnLeft)*angleFunction(_angleLeftOnLeft)*distanceFunction(_distanceOnLeft, _distanceThreshold);
+float qsr::qsrLeft(){
+    calculateAnglesAndDistanceLeft();
+    return angleFunction(_angleRightLeft)*angleFunction(_angleLeftLeft)*distanceFunction(_distanceLeft, _perimeterLandmark);
 }
 
 float qsr::qsrInFront(){
     calculateAnglesAndDistanceInFront();
-    return angleFunction(_angleRightInFront)*angleFunction(_angleLeftInFront)*distanceFunction(_distanceInFront, _distanceThreshold);
+    return angleFunction(_angleRightInFront)*angleFunction(_angleLeftInFront)*distanceFunction(_distanceInFront, _perimeterLandmark);
 }
 
 float qsr::qsrBehind(){
     calculateAnglesAndDistanceBehind();
-    return angleFunction(_angleRightBehind)*angleFunction(_angleLeftBehind)*distanceFunction(_distanceBehind, _distanceThreshold);
+    return angleFunction(_angleRightBehind)*angleFunction(_angleLeftBehind)*distanceFunction(_distanceBehind, _perimeterLandmark);
 }
 
-void qsr::test(){
-    //    float angle2;
-    //    for(float angle=0.0; angle <= 2*M_PI; angle+=M_PI_4/30){
-    //        if(pcl::rad2deg(angle) < 180) std::cout << pcl::rad2deg(angle) << " " << angleFunction(angle) << std::endl;
-    //        else std::cout << pcl::rad2deg(angle) - 360 << " " << angleFunction(angle) << std::endl;
-    //    }
+QString qsr::getDescription(){
+    float values_right[_objectList.size()][_objectList.size()];
+    float values_left[_objectList.size()][_objectList.size()];
+    float values_front[_objectList.size()][_objectList.size()];
+    float values_behind[_objectList.size()][_objectList.size()];
 
-    for(float distance = 0.0; distance <= 2; distance+=0.01){
-        std::cout << distance << " " << distanceFunction(distance, 0.6) << std::endl;
+    stringstream ss;
+
+
+    for(int i=0; i < _objectList.size(); i++){
+        calculatePointsLandmark(_objectList[i]);
+        for(int j=0; j < _objectList.size(); j++){
+            if(j == i){
+                values_left[j][i] = -1;
+                values_right[j][i] = -1;
+                values_front[j][i] = -1;
+                values_behind[j][i] = -1;
+            }
+            else{
+                calculatePointTrajector(_objectList[j]);
+                values_right[j][i] = qsrRight();
+                values_left[j][i] = qsrLeft();
+                values_front[j][i] = qsrInFront();
+                values_behind[j][i] = qsrBehind();
+            }
+            if(values_right[j][i] >= 0.5 && ( _objectList[i].name.toStdString() != "mug" && _objectList[i].name.toStdString() != "mouse" &&  _objectList[i].name.toStdString() != "Mouse" &&  _objectList[i].name.toStdString() != "Mug")){
+                ss << "- The " << _objectList[j].name.toStdString() << " is to the right of the " << _objectList[i].name.toStdString() << "." << endl << endl;
+            }
+            if(values_left[j][i] >= 0.5 && ( _objectList[i].name.toStdString() != "mug" && _objectList[i].name.toStdString() != "mouse" &&  _objectList[i].name.toStdString() != "Mouse" &&  _objectList[i].name.toStdString() != "Mug")){
+                ss << "- The " << _objectList[j].name.toStdString() << " is to the left of the " << _objectList[i].name.toStdString() << "." << endl << endl;
+            }
+            if(values_front[j][i] >= 0.5 && ( _objectList[i].name.toStdString() != "mug" && _objectList[i].name.toStdString() != "mouse" &&  _objectList[i].name.toStdString() != "Mouse" &&  _objectList[i].name.toStdString() != "Mug")){
+                ss << "- The " << _objectList[j].name.toStdString() << " is in front of the " << _objectList[i].name.toStdString() << "." << endl << endl;
+            }
+            if(values_behind[j][i] >= 0.5 && ( _objectList[i].name.toStdString() != "mug" && _objectList[i].name.toStdString() != "mouse" &&  _objectList[i].name.toStdString() != "Mouse" &&  _objectList[i].name.toStdString() != "Mug")){
+                ss << "- The " << _objectList[j].name.toStdString() << " is behind the " << _objectList[i].name.toStdString() << "." << endl << endl;
+            }
+        }
+    }
+
+    return QString::fromStdString(ss.str());
+}
+
+QString qsr::getAllValues(){
+    float values_right[_objectList.size()][_objectList.size()];
+    float values_left[_objectList.size()][_objectList.size()];
+    float values_front[_objectList.size()][_objectList.size()];
+    float values_behind[_objectList.size()][_objectList.size()];
+
+    for(int i=0; i < _objectList.size(); i++){
+        calculatePointsLandmark(_objectList[i]);
+        for(int j=0; j < _objectList.size(); j++){
+            if(j == i){
+                values_left[j][i] = -1;
+                values_right[j][i] = -1;
+                values_front[j][i] = -1;
+                values_behind[j][i] = -1;
+            }
+            else{
+                calculatePointTrajector(_objectList[j]);
+                values_right[j][i] = qsrRight();
+                values_left[j][i] = qsrLeft();
+                values_front[j][i] = qsrInFront();
+                values_behind[j][i] = qsrBehind();
+            }
+        }
+    }
+
+    stringstream ss;
+
+    getStringStream(&values_right[0][0], ss, "Right");
+    getStringStream(&values_left[0][0], ss, "Left");
+    getStringStream(&values_front[0][0], ss, "Front");
+    getStringStream(&values_behind[0][0], ss, "Behind");
+
+    return QString::fromStdString(ss.str());
+}
+
+
+
+void qsr::getStringStream(float *values, stringstream &ss, string relation){
+
+    // Print the relation header
+    if(relation == "Right"){
+        ss << "/////////////////////////" << endl;
+        ss << "/         Right         /" << endl;
+        ss << "/////////////////////////\n" << endl;
+    }
+    else if(relation == "Left"){
+        ss << "/////////////////////////" << endl;
+        ss << "/         Left          /" << endl;
+        ss << "/////////////////////////\n" << endl;
+    }
+    else if(relation == "Front"){
+        ss << "/////////////////////////" << endl;
+        ss << "/         Front         /" << endl;
+        ss << "/////////////////////////\n" << endl;
+    }
+    else if(relation == "Behind"){
+        ss << "/////////////////////////" << endl;
+        ss << "/         Behind        /" << endl;
+        ss << "/////////////////////////\n" << endl;
+    }
+
+    // Print the table
+    for(int i =0; i < _objectList.size()+1; i++){
+        ss << "|" << setw(10) << "----------";
+    }
+
+    ss << "|" << endl << "|" << setw(10) << "";
+    for(int i = 0; i < _objectList.size(); i++){
+        ss << "|" << setw(10) << _objectList[i].name.toStdString();
+    }
+
+    ss << "|" << endl;
+
+    for(int i =0; i < _objectList.size()+1; i++){
+        ss << "|" << setw(10) << "----------";
+    }
+
+    ss << "|" << endl;
+
+    for(int i = 0; i < _objectList.size(); i++){
+        ss << "|" << setw(10) << right << _objectList[i].name.toStdString() << "|";
+        for(int j = 0; j < _objectList.size(); j++){
+            if(i==j) ss << setw(10) << right << "X" << "|";
+            else ss << setw(10) << right << setprecision(2)  << values[i*_objectList.size()+j] << "|";
+        }
+        ss << endl;
+
+        for(int i =0; i < _objectList.size()+1; i++){
+            ss << "|" << setw(10) << "----------";
+        }
+
+        ss << "|" << endl;
     }
 }

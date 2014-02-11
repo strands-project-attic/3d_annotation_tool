@@ -21,6 +21,9 @@
 #include <math.h>
 #include <eigen3/Eigen/Dense>
 
+#include <iostream>
+#include <fstream>
+
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/filesystem/path.hpp>
 
@@ -55,7 +58,7 @@ void MainWindow::on_actionOpen_triggered(){
     if(!_fileName.isEmpty()){
         QString info_doc = qApp->applicationDirPath();
         info_doc.remove("bin");
-        info_doc.append("/info_app.xml");;
+        info_doc.append("info_app.xml");;
 
         boost::filesystem3::path p(_fileName.toStdString());
         std::string path = p.parent_path().string();
@@ -534,6 +537,7 @@ void MainWindow::on_actionInsert_new_object_triggered(){
                 // First guess is that the object is lying on the table
                 _objectPose.x = clickedPoints[0].x;
                 _objectPose.y = clickedPoints[0].y;
+                _objectPose.z = 0.0;
 
                 // To messure distance I am not using the z component of the picked points
                 pcl::PointXYZ point1_x_y, point2_x_y, point3_x_y;
@@ -804,8 +808,7 @@ void MainWindow::on_actionSave_PCD_and_export_objects_info_triggered()
     }
 }
 
-
-
+// Enable or disable info messages
 void MainWindow::on_actionShow_info_messages_toggled(bool arg1)
 {
     if(arg1)
@@ -814,6 +817,7 @@ void MainWindow::on_actionShow_info_messages_toggled(bool arg1)
         _showInfoMsgs = false;
 }
 
+// Undo function
 void MainWindow::on_actionUndo_triggered()
 {
     // Reload the previous point cloud and visualize it
@@ -832,6 +836,7 @@ void MainWindow::on_actionUndo_triggered()
     _ui->actionUndo->setEnabled(false);
 }
 
+// Downsampling function
 void MainWindow::on_actionDownsample_point_cloud_triggered()
 {
     // Call the dialog to introduce the filter values
@@ -854,44 +859,67 @@ void MainWindow::on_actionDownsample_point_cloud_triggered()
     _ui->actionUndo->setEnabled(true);
 }
 
+// QSR values displayed in the terminal
 void MainWindow::on_actionQSR_values_triggered()
 {
     if(objectsInfo.numberOfObjects()>1){
         qsr QSR(objectsInfo.getObjectList());
-        QSR.calculateQSROnRight();
-        QSR.calculateQSROnLeft();
+        QSR.calculateQSRRight();
+        QSR.calculateQSRLeft();
         QSR.calculateQSRInFront();
         QSR.calculateQSRBehind();
-        //    QSR.test();
     }
     else QMessageBox::warning(this,
                               "Error",
                               "It is not possible to calculate the QSR values. Add more objects or load an annotation.");
 }
 
-//void MainWindow::on_actionSave_viewpoint_triggered()
-//{
-//    std::vector<pcl::visualization::Camera> cameras;
-//    _viewPose = viewInteractor.getCameraParametersAndPose(cameras);
-//    _camera = cameras[0];
+// Obtain a description of the scene using QSR
+void MainWindow::on_actionDescription_of_scene_using_QSR_triggered()
+{
+    if(objectsInfo.numberOfObjects()>1){
+        qsr QSR(objectsInfo.getObjectList());
+        QString description = QSR.getDescription();
 
-//    std::cout << "Number of cameras: " << cameras.size() << std::endl;
-//    std::cout << "Camera pose: x: " << cameras[0].pos[0]
-//              << " y: " << cameras[0].pos[1]
-//              << " z: " << cameras[0].pos[2] << std::endl;
-//    std::cout << "Camera view: x: " << cameras[0].view[0]
-//              << " y: " << cameras[0].view[1]
-//              << " z: " << cameras[0].view[2] << std::endl;
-//}
+        QMessageBox::information(this,
+                                 "Description of the scene",
+                                 description);
 
-//void MainWindow::on_actionLoad_viewpoint_triggered()
-//{
-//    viewInteractor.setCameraPose(_camera.pos[0], _camera.pos[1], _camera.pos[2],
-//                                 0, 0, 0,
-//                                 _camera.view[0], _camera.view[0], _camera.view[0]);
+    }
+    else QMessageBox::warning(this,
+                              "Error",
+                              "It is not possible to obtain a description of the scene. Annotate some objects or load an annotation.");
+}
 
-//    std::cout << _viewPose(0,1) << "  " << _viewPose(1,0) << "  " << _viewPose(2,0) << std::endl;
-//}
+// Save all the QSR values in a .txt file
+void MainWindow::on_actionSave_QSR_in_txt_file_triggered()
+{
+    if(objectsInfo.numberOfObjects()>1){
+        qsr QSR(objectsInfo.getObjectList());
+        std::string fileName = _fileName.toStdString();
+        fileName.erase(fileName.find_last_of(".")+1, 3);
+        fileName.append("txt");
+
+        QString file = QFileDialog::getSaveFileName(this,
+                                                        tr("Save file"),
+                                                        QString::fromStdString(fileName),
+                                                        tr("Text File(*.txt)"));
+        if(!file.isEmpty()){
+            std::ofstream outputFile;
+            outputFile.open (file.toAscii(), ios::trunc);
+            QString allValues = QSR.getAllValues();
+            outputFile << allValues.toStdString();
+            outputFile.close();
+        }
+        else{
+            QMessageBox::warning(this, "Error", "Text file not saved.");
+        }
+
+    }
+    else QMessageBox::warning(this,
+                              "Error",
+                              "It is not possible to obtain a description of the scene. Annotate some objects or load an annotation.");
+}
 
 ///////////////////////////////////////////////////////
 // The following functions are used inside the above //
@@ -905,6 +933,7 @@ void MainWindow::init(){
 
     // Start the bool variables
     _pcdLoaded = false;
+    _pcdLoadError = false;
     _planeDefined = false;
     _planeSegmentated = false;
     _insertingObject = false;
@@ -920,7 +949,7 @@ void MainWindow::init(){
     _ui->qvtkWidget->setAutoFillBackground(true);
 
     //Windows title
-    setWindowTitle("3D annotation tool");
+    setWindowTitle("3D Annotation Tool");
 
     // Clear tree widget
     _ui->treeWidget->clear();
@@ -928,7 +957,7 @@ void MainWindow::init(){
     // Read the information left for the user in the previous session
     QString info_doc = qApp->applicationDirPath();
     info_doc.remove("bin");
-    info_doc.append("/info_app.xml");
+    info_doc.append("info_app.xml");;
 
     boost::property_tree::ptree root;
     read_xml(info_doc.toStdString(), root);
@@ -946,7 +975,7 @@ void MainWindow::init(){
 
 // Used to visualized the point cloud
 void MainWindow::visualize(){
-    if(_pcdLoaded){
+    if(_pcdLoaded || _pcdLoadError){
         // Clean the viewer if another pcd has been loaded before
         viewInteractor.cleanAll();
     }
@@ -988,7 +1017,7 @@ void MainWindow::open_pcd_file(){
             }
             else{
                 QMessageBox::warning(this, "Error", "Pcd file not loaded, do it again.");
-                _pcdLoaded=false;
+                _pcdLoadError=true;
             }
         }
     }else{
@@ -1223,7 +1252,7 @@ void MainWindow::showInitialMessage(){
             // Write false in the output file
             QString info_doc = qApp->applicationDirPath();
             info_doc.remove("bin");
-            info_doc.append("/info_app.xml");;
+            info_doc.append("info_app.xml");;
 
             boost::property_tree::ptree root;
 
