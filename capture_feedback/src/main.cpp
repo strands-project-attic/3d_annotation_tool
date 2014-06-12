@@ -4,6 +4,8 @@
 
 // PCL specific includes
 #include <pcl/ros/conversions.h>
+//TSA: I THINK THIS NEEDS TO BE CHANGED ^
+
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
@@ -11,6 +13,7 @@
 #include "cv.h"
 #include "highgui.h"
 #include <opencv.hpp>
+//TSA: I THINK THIS NEEDS TO BE CHANGED ^
 
 #include <string.h>
 
@@ -97,6 +100,7 @@ void  cloud_cb(const sensor_msgs::PointCloud2ConstPtr& input)
 	ROS_INFO("pointcloud %i\n",counter);
 	pcl::PointCloud<pcl::PointXYZRGB> cloud;
 	pcl::fromROSMsg (*input, cloud);
+    //TSA: I THINK THIS NEEDS TO BE CHANGED ^
 
 	int width = cloud.width;
 	int height = cloud.height;
