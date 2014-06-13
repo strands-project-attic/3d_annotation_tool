@@ -1,8 +1,11 @@
 #ifndef VIEWERINTERACTOR_H
 #define VIEWERINTERACTOR_H
 
-#include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/visualization/common/common.h>
+#include <vtkRenderWindow.h>
+#include <pcl/filters/passthrough.h>
+#include <pcl/visualization/pcl_visualizer.h>
+
 #include "pointcloudmodifier.h"
 #include "objectsinformation.h"
 

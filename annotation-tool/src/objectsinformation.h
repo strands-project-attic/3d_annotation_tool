@@ -4,6 +4,7 @@
 #include "pcl/point_types.h"
 #include <QString>
 #include <boost/property_tree/ptree.hpp>
+#include <pcl/filters/passthrough.h>
 
 
 // The object geometry

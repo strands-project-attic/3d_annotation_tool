@@ -3,7 +3,7 @@
 
 #include <pcl/point_types.h>
 #include <pcl/ModelCoefficients.h>
-
+#include <pcl/filters/passthrough.h>
 
 typedef pcl::PointXYZRGB pointT;
 typedef pcl::PointCloud<pointT> pointCloud;

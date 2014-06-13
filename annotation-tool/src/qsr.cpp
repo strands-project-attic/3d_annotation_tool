@@ -2,6 +2,8 @@
 
 #include <math.h>
 #include <iomanip>
+#include <pcl/common/common.h>
+#include <pcl/common/distances.h>
 
 #include <pcl/common/transforms.h>
 #include <pcl/common/eigen.h>

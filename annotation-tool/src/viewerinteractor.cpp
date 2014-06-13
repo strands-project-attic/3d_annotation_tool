@@ -7,6 +7,9 @@
 #include <pcl/filters/project_inliers.h>
 #include <pcl/common/transforms.h>
 
+
+#include <pcl/visualization/pcl_visualizer.h>
+
 #include <eigen3/Eigen/Eigen>
 
 
@@ -312,7 +315,7 @@ void viewerInteractor::setCameraPose(double posX, double posY, double posZ,
                                      double viewX, double viewY, double viewZ,
                                      double upX, double upY, double upZ){
 
-    _viewer->setCameraPose(posX, posY, posZ, viewX, viewY, viewZ, upX, upY, upZ);
+    _viewer->setCameraPosition(posX, posY, posZ, viewX, viewY, viewZ, upX, upY, upZ);
     render();
 }
 

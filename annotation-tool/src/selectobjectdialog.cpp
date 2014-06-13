@@ -42,7 +42,7 @@ void selectObject::readData(int type){
         // read data
         _list_doc = qApp->applicationDirPath();
         _list_doc.remove("bin");
-        _list_doc.append("list_objects.xml");;
+        _list_doc.append("/list_objects.xml");;
 
         ptree root;
         read_xml(_list_doc.toStdString(), root);
